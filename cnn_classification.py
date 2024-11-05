@@ -16,10 +16,10 @@ from sklearn.decomposition import PCA
 import wavelet_preprocessing
 
 # Load the training data (see rt_dataset to see how it was created)
-X_train=np.load("X_train_rta.npy")
-labels=np.load("y_train_rta.npy")
-X_test=np.load("X_test_rta.npy")
-y_test=np.load("y_test_rta.npy")
+X_train=np.load("X_train.npy")
+labels=np.load("y_train.npy")
+X_test=np.load("X_test.npy")
+y_test=np.load("y_test.npy")
 # Extracting features from the data
 train_ftr=wavelet_preprocessing.dwt_feature_extraction(X_train)
 test_ftr=wavelet_preprocessing.dwt_feature_extraction(X_test)

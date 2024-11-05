@@ -42,7 +42,6 @@ for i in range(6):
         # Create a label array for the task, one label for each sample
         task_labels = np.full((task_data.shape[0],), label_mapping[task])
         y_train.append(task_labels)
-
 # Convert the lists to NumPy arrays for better performance
 X_train = np.vstack(X_train)  # Shape: (n_samples, n_channels, n_timepoints)
 y_train = np.concatenate(y_train)
