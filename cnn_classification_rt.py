@@ -16,14 +16,13 @@ from sklearn.decomposition import PCA
 import wavelet_preprocessing
 
 # Load the training data (see rt_dataset to see how it was created)
-X_train=np.load("X_train.npy")
-labels=np.load("y_train.npy")
-X_test=np.load("X_test.npy")
-y_test=np.load("y_test.npy")
+X_train=np.load("X_train_rt.npy")
+labels=np.load("y_train_rt.npy")
+X_test=np.load("X_test_rt.npy")
+y_test=np.load("y_test_rt.npy")
 # Extracting features from the data
 train_ftr=wavelet_preprocessing.dwt_feature_extraction(X_train)
 test_ftr=wavelet_preprocessing.dwt_feature_extraction(X_test)
-
 # Transpose the the matrix to fit the input shape (it trains better like this)
 X_test=X_test.transpose(0,2,1)
 X_train=X_train.transpose(0, 2, 1) # Shape: (n_samples, n_channels, n_timepoints)
