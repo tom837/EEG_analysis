@@ -4,4 +4,12 @@ This is the code for my eeg classification thesis project.
 
 # How to use:
 
-In the files there are two different types of classifications. the first one is task by task classification, it is distinguished with cl in the names of the files. To create and train the cnn model symply run the cnn_classification_cl.py file, it automaticaly evaluates the model and saves it. The second type of classification is real time classification. The data is setup to be a "continus" stream of 1second windows with 0.5seconds overlaping between each window. To train the model run the cnn_classification_rt.py or the knn_classification_rt.py. rt_dataset and cl_dataset are not usefull here as the dataset has already been processed in the X_train and X_test files but you can find the full dataset at https://github.com/orvindemsy/BCICIV2a-FBCSP.git. 
+Clone the repo and download the full dataset, which you can find at https://github.com/orvindemsy/BCICIV2a-FBCSP.git (this step is optional as I provided a partial dataset already preprocessed in the file data_cleaned.npy). If you want to use the whole dataset, you must run the rt_dataset.py file to preprocess and clean the data. You can run the cnn_classification_rt.py, LDA_classification.py or the svm_classification_rt.py files they will output the accuracy and prediction-accuracy table for each person. 
+Note that the classes are:
+0: Nothing
+1: left hand
+2: right hand 
+3: feet
+4: tongue
+
+This project is still a work in progress files are susceptible to change or deletion. The best results we got were using LDA and got an accuracy of 55%. 
