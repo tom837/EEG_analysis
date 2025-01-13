@@ -1,6 +1,8 @@
 # EEG_analysis
 
-This is the code for my eeg classification thesis project.
+This is the code for my eeg classification thesis project. This project focuses on the analysis and classification of EEG (Electroencephalography) signals to distinguish between task-related brain activity. The pipeline includes preprocessing steps such as bandpass filtering, and Independent Component Analysis (ICA) to clean the data. The goal is to extract meaningful features from the EEG signals and classify brain activity during motor tasks using machine learning techniques. This project has applications in brain-computer interfaces (BCI), neuroscience research, and real-time signal processing.
+
+
 
 # How to use:
 
