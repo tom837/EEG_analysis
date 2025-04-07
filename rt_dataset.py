@@ -7,8 +7,23 @@ import ica_preprocessing
 import mne
 from mne.preprocessing import ICA
 import ica
+from imblearn.over_sampling import SMOTE
+import undersample as ud
 
 # Creating the training and validation data for the real time classification
+
+
+
+
+def cr_win(eeg_data, labels, window_size=250,step_size=125):
+    output=[]
+    labs=[]
+    i=[]
+    while i*step_size+window_size<len(eeg_data):
+        output.append(eeg_data[i*step_size:i*step_size+window_size])
+        labs.append(labels[i*step_size+(window_size//2)])
+    return output, labs
+    
 
 def create_windows(eeg_data, window_size=250,step_size=125):
     # Create window_size sample windows with step_size samples overlap between each window
@@ -32,11 +47,13 @@ def reshape_positions(positions,window_size=250,step_size=125):
     reshaped_positions = position_windows[:, middle_index]
     return reshaped_positions
 
+
+
 # The lists the data will go to
 X_train=[]
 y_train=[]
-X_test=[]
-y_test=[]
+X_eval=[]
+y_eval=[]
 # Mapping the labels of the tasks
 label_mapping = {
         'fixation': 0,
@@ -45,11 +62,12 @@ label_mapping = {
         'feet': 3,
         'tongue': 4
     }
+
 # Go through all the test subjects (note I am only using 6 as oposed to 9 because the last 3 got corrupt but I will fix this)
 whole=time.time()
-for i in range(2):
-    print(f"--- processing personne {i+1} ---")
-    personne=time.time()
+
+for i in range(9):
+    print(f"Getting data from person {i+1}")
     # Load each file
     file=f"BCICIV_2a_gdf/A0{i+1}T.npz"
     data = np.load(file)
@@ -84,10 +102,36 @@ for i in range(2):
     # Get random section for evaluation data
     X_train.append(X)
     y_train.append(positions)
-    print(f"Time spent on personne {i+1}: {time.time()-personne}")
+    # Evaluation Data (basicaly the same thing as the training)
+    file=f"BCICIV_2a_gdf/A0{i+1}E.npz"
+    file_cl=f"true_labels/A0{i+1}E.npz"
+    data = np.load(file)
+    data_cl=np.load(file_cl)
+    # Differentiate between training data (signal) and evaluation data(X) ~90/10
+    # The evaluation data is going to be a continuous stream as oposed to the training data that is going to be sequential
+    X=data['s'][60000:600000]
+    cl = data_cl['classlabel'].astype('int32')
+    for j in range(4):
+        cl[np.where(cl==j+1)[0]]=769+j
+    type=data['etyp']
+    type[np.where(type==[783])[0]]=cl
+    # Creating the labels for evaluation data
+    positions=np.zeros(len(data['s']))
+    positions= data_extraction.extract_data_rt(769,type,positions,data['epos'],1)
+    positions= data_extraction.extract_data_rt(770,type,positions,data['epos'],2)
+    positions= data_extraction.extract_data_rt(771,type,positions,data['epos'],3)
+    positions= data_extraction.extract_data_rt(772,type,positions,data['epos'],4)
+    positions=positions[60000:600000]
+    X_eval.append(X)
+    y_eval.append(positions)
+    print(f"done extracting person {i+1}")
 X_train=np.array(X_train)
 y_train=np.array(y_train)
+X_eval=np.array(X_eval)
+y_eval=np.array(y_eval)
+X_eval=X_eval.transpose(0,2,1)
 X_train=X_train.transpose(0,2,1)
+<<<<<<< Updated upstream
 print(X_train.shape)
 """
 data_mean_removed = X_train - np.mean(X_train, axis=1, keepdims=True)
@@ -111,120 +155,65 @@ ch_names = eeg_ch_names + eog_ch_names
 
 # Define channel types
 ch_types = ['eeg'] * 22 + ['eog'] * 3
+=======
+>>>>>>> Stashed changes
 
-# Create an MNE Info object
-info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
-
-# Create the RawArray object
-raw = mne.io.RawArray(X_train, info)
-
-# Set the montage for the EEG channels (10-20 system)
-montage = mne.channels.make_standard_montage("standard_1020")
-raw.set_montage(montage)
-
-
-# Plot the raw data (optional)
-#raw.plot()
-
-
-# Assuming `raw` is your MNE Raw object with EEG data
-raw.filter(1., 40., fir_design='firwin')  # Apply a band-pass filter (optional but recommended)
-print(X_train.shape)
-ica = ICA(n_components=20, random_state=97, max_iter=800)
-ica.fit(raw)
-ica.plot_components() 
-eog_indices, eog_scores = ica.find_bads_eog(raw)  # Detect EOG-related components
-
-# Optionally, plot the time series of ICs for visual inspection
-ica.plot_sources(raw, picks=eog_indices)
-
-# Mark EOG components for exclusion
-ica.exclude = eog_indices
-ica.plot_sources(raw)
-
-print("starting")
-X_train=data_extraction.cleaning_eog_rt(np.array(X_train))
-print("done")
-print(np.array(X_train).shape)
-X_train=wavelet_preprocessing.wavelet_rt(np.array(X_train))
-X_train=np.array(X_train)
-print(X_train.shape)
-f=5
-fig, axes = plt.subplots(f, 1, figsize=(10, 7), sharex=True)
-time_axis = np.arange(X_train[0][:250].shape[0]) / 250
-for i in range(f):
-    # Only showing the 1st second for better visibility
-    axes[i].plot(time_axis, X_train[i][i*250:i*250+250], color="blue")
-    axes[i].set_title(f'cleaned signal')
-    axes[i].set_ylabel('Amplitude (µV)')
-    axes[i].grid(True)
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-tmpx=X_train
-tmpy=y_train
-
-X_train=[]
-y_train=[]
-X_test=[]
-y_test=[]
-for i in range(9):
-    X_test.append(tmpx[i*600000+30000:i*600000+40000])
-    y_test.append(tmpy[i*600000+30000:i*600000+40000])
-    X_train.append(np.concatenate([tmpx[:i*600000+30000],tmpx[i*600000+40000:]]))
-    y_train.append(np.concatenate([tmpy[:i*600000+30000],tmpy[i*600000+40000:]]))
-# Convert the lists to NumPy arrays for better performance
-X_test=np.array(X_test)
-y_test=np.array(y_test)
-X_train=np.array(X_train)
-y_train=np.array(y_train)
-print(X_test.shape)
-print(X_train.shape)
-# Reshape the arrays to the correct shape
-X_test=X_test.reshape(-1, np.size(X_test,axis=-1))
-y_test=y_test.reshape(-1)
-X_train=X_train.reshape(-1, np.size(X_train,axis=-1))
-y_train=y_train.reshape(-1)
-# Create the 1sec windows for the data
-X_test=create_windows(X_test)# Shape: (n_samples, n_timepoints, n_channels)
-y_test=reshape_positions(y_test)
-X_train=create_windows(X_train)
-y_train=reshape_positions(y_train)
-X_train=np.delete(X_train,np.where(y_train==0)[0][len(np.where(y_train==1)[0]):],0)
-y_train=np.delete(y_train,np.where(y_train==0)[0][len(np.where(y_train==1)[0]):],0)
-
-X_test=X_test.transpose(0,2,1)
-X_train=X_train.transpose(0,2,1)"""
 tmp=[]
 tmp1=[]
+tmp_eval=[]
+tmp1_eval=[]
 for i in range(len(X_train)):
-    data_cleaned,_ = ica.clean(X_train[i])
+    print(f"--- processing person {i+1} ---")
+    personne=time.time()
+    data_cleaned,_= ica.clean(X_train[i])
+    data_eval,_=ica.clean(X_eval[i])
+    """data_cleaned=X_train[i].T
+    data_eval=X_eval[i].T"""
     data_cleaned=data_cleaned[:,:22]
-
-
+    data_eval=data_eval[:,:22]
+    print(data_cleaned.shape)
     data_mean_removed = data_cleaned - np.mean(data_cleaned, axis=1, keepdims=True)
     # Z-score normalization
-    data_cleaned = data_mean_removed / np.std(data_mean_removed, axis=1, keepdims=True)
+    data_cleaned = data_mean_removed / np.std(data_cleaned, axis=1, keepdims=True)
 
-
+    data_mean_removed = data_eval - np.mean(data_eval, axis=1, keepdims=True)
+    # Z-score normalization
+    data_eval = data_mean_removed / np.std(data_eval, axis=1, keepdims=True)
     data_cleaned=create_windows(data_cleaned)# Shape: (n_samples, n_timepoints, n_channels)
+    data_eval=create_windows(data_eval)
     tmp.append(reshape_positions(y_train[i]))
+<<<<<<< Updated upstream
     print(tmp)
     for j in range(len(tmp)):
         print(len(tmp[j]))
     print("y_train shape:", tmp[i].shape)
     print("data shape:", data_cleaned.shape)
+=======
+    tmp_eval.append(reshape_positions(y_eval[i]))
+>>>>>>> Stashed changes
     data_cleaned = np.nan_to_num(data_cleaned, nan=0.0, posinf=0.0, neginf=0.0)
+    data_eval = np.nan_to_num(data_eval, nan=0.0, posinf=0.0, neginf=0.0)
     tmp1.append(data_cleaned)
+    tmp1_eval.append(data_eval)
+    print(f"Time spent on person {i+1}: {time.time()-personne}")
 y_train=np.array(tmp)
 X_train=np.array(tmp1)
+y_eval=np.array(tmp_eval)
+X_eval=np.array(tmp1_eval)
 # Save the data
 
+<<<<<<< Updated upstream
 print(X_train.shape)
 print(y_train.shape)
+=======
+print("eval shapes", X_eval.shape, y_eval.shape)
+print("Train shapes", X_train.shape,y_train.shape)
+
+>>>>>>> Stashed changes
 np.save('data_cleaned.npy',X_train)
 np.save('y_train_rt.npy',y_train)
+np.save('data_cleaned_eval.npy',X_eval)
+np.save('y_train_rt_eval.npy',y_eval)
 #np.save('X_test.npy',X_test)
 #np.save('y_test.npy',y_test)
 

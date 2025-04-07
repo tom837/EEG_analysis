@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import ShuffleSplit, cross_val_score
+from sklearn.model_selection import ShuffleSplit, cross_val_score,StratifiedKFold
 from sklearn.pipeline import Pipeline
 from mne import Epochs, pick_types
 from mne.decoding import CSP
@@ -11,11 +11,18 @@ from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import cohen_kappa_score
 
 data=np.load('data_cleaned.npy')
 labels=np.load('y_train_rt.npy')
-data=np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 data=data.transpose(0,1,3,2)
+data_eval=np.load('data_cleaned_eval.npy')
+labels_eval=np.load('y_train_rt_eval.npy')
+data_eval=data_eval.transpose(0,1,3,2)
+print("NaN values:", np.isnan(data).sum())
+print("Inf values:", np.isinf(data).sum())
+print("NaN values:", np.isnan(data_eval).sum())
+print("Inf values:", np.isinf(data_eval).sum())
 
 def undersample_data(X, y):
     """
@@ -48,42 +55,76 @@ def reshaping(data):
     n_samples, n_channels, n_timepoints = data.shape
     return data.reshape(n_samples, -1)
 
+<<<<<<< Updated upstream
 for i in range(1):
+=======
+
+
+kapa_values=[]
+accuracies=[]
+for i in range(len(data)):
+>>>>>>> Stashed changes
     scores = []
     X_train,y_train= undersample_data(data[i], labels[i])
+    X_test,y_test=undersample_data(data_eval[i],labels_eval[i])
+    """X_train=np.delete(X_train,np.where(y_train==0)[0],axis=0)
+    y_train=np.delete(y_train,np.where(y_train==0)[0],axis=0)
+    X_test=np.delete(X_test,np.where(y_test==0)[0],axis=0)
+    y_test=np.delete(y_test,np.where(y_test==0)[0],axis=0)"""
+    print(X_train.shape,y_train.shape)
     n_samples, n_channels, n_timepoints = X_train.shape
     # FFT for each channel
     #X_train=np.abs(np.fft.rfft(X_train,axis=-1))
     #X_train = X_train.reshape(n_samples, -1)
     print(X_train.shape,y_train.shape)
-    n=15
+    n=10
     pca=PCA(n_components=n)
     tmp=[]
     for sample in X_train:
         tmp.append(pca.fit_transform(sample))
     X_train=np.array(tmp)
-    X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-    cv = ShuffleSplit(10, test_size=0.2, random_state=42)
+    pca=PCA(n_components=n)
+    tmp=[]
+    for sample in X_test:
+        tmp.append(pca.fit_transform(sample))
+    X_test=np.array(tmp)
+    #X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    cv = ShuffleSplit(5, test_size=0.2, random_state=42)
     cv_split = cv.split(X_train)
     #X_train, X_test, y_train, y_test = train_test_split(X_train, labels[i], test_size=0.2, random_state=42)
     for i in range(5):
         print(len(np.where(y_test==i)[0]))
     # Assemble a classifier
-    lda = LinearDiscriminantAnalysis()
-    csp = CSP(n_components=50 , reg=None, log=True, norm_trace=False)
-
+    lda = LinearDiscriminantAnalysis(solver='eigen',shrinkage='auto',n_components=3)
+    csp = CSP(n_components=40 , reg=None, log=True, norm_trace=False)
     # Use scikit-learn Pipeline with cross_val_score function
     clf = Pipeline([("CSP", csp),("LDA", lda)])
-    scores = cross_val_score(clf, X_train, y_train, cv=cv, n_jobs=None)
+    #scores = cross_val_score(clf, X_train, y_train, cv=cv, n_jobs=None)
     # Printing the results
     # Printing the results
     """class_balance = np.mean(y_train == y_train[0])
     class_balance = max(class_balance, 1.0 - class_balance)
     print(f"Classification accuracy: {np.mean(scores)} / Chance level: {class_balance}")"""
+    print("here?")
+    print("NaN values:", np.isnan(y_train).sum())
+    print("Inf values:", np.isinf(y_train).sum())
+    print("NaN values:", np.isnan(y_test).sum())
+    print("Inf values:", np.isinf(y_test).sum())
 
-    # plot CSP patterns estimated on full data for visualization
-    csp.fit_transform(X_train, y_train)
-    clf.fit_transform(X_train,y_train)
+    #csp.fit_transform(X_train,y_train)
+    for train_idx, test_idx in cv_split:
+        y_tr, y_te = y_train[train_idx], y_train[test_idx]
+        X_tr, X_te= X_train[train_idx], X_train[test_idx]
+        clf.fit(X_tr,y_tr)
+        # fit classifier
+        # running classifier: test classifier on sliding window
+        score_this_window = []
+        score=clf.score(X_te, y_te)
+        score_this_window.append(score)
+        print("final score:", score)
+
+    #clf.fit_transform(X_train,y_train)
+    # running classifier: test classifier on sliding window
     predicted_labels=clf.predict(X_test)
     n_correct=0
     for i in range(len(predicted_labels)):
@@ -92,7 +133,12 @@ for i in range(1):
             n_correct+=1
     conf_matrix = confusion_matrix(y_test, predicted_labels)
     # Print the ratio of correctness of the model in the evaluation dataset
+    accuracy=n_correct/len(predicted_labels)
     print("ratio correctness: ", n_correct/len(predicted_labels))
+    kappa = cohen_kappa_score(y_test,predicted_labels)
+    accuracies.append(accuracy)
+    print("kap", kappa)
+    kapa_values.append(kappa)
     predicted_labels=clf.predict(X_train)
     n_correct=0
     for i in range(len(predicted_labels)):
@@ -101,11 +147,10 @@ for i in range(1):
             n_correct+=1
     # Print the ratio of correctness of the model in the evaluation dataset
     print("ratio correctness trained: ", n_correct/len(predicted_labels))
-    
     plt.figure(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Reds", cbar=True)
 
-    # Customize the plot
+    # Customize the plot 
     plt.title("Prediction-Accuracy Table: Type")
     plt.xlabel("Predicted")
     plt.ylabel("Observed")
@@ -145,3 +190,9 @@ for i in range(1):
     plt.title("Classification score over time")
     plt.legend(loc="lower right")
     plt.show()"""
+    
+print(accuracies)
+print(kapa_values)
+print(np.mean(kapa_values))
+
+
