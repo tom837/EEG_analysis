@@ -55,15 +55,12 @@ def reshaping(data):
     n_samples, n_channels, n_timepoints = data.shape
     return data.reshape(n_samples, -1)
 
-<<<<<<< Updated upstream
-for i in range(1):
-=======
+
 
 
 kapa_values=[]
 accuracies=[]
 for i in range(len(data)):
->>>>>>> Stashed changes
     scores = []
     X_train,y_train= undersample_data(data[i], labels[i])
     X_test,y_test=undersample_data(data_eval[i],labels_eval[i])

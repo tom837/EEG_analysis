@@ -1,9 +1,7 @@
 import numpy as np
 import data_extraction
-import wavelet_preprocessing
 import time
 import matplotlib.pyplot as plt
-import ica_preprocessing
 import mne
 from mne.preprocessing import ICA
 import ica
@@ -131,32 +129,8 @@ X_eval=np.array(X_eval)
 y_eval=np.array(y_eval)
 X_eval=X_eval.transpose(0,2,1)
 X_train=X_train.transpose(0,2,1)
-<<<<<<< Updated upstream
 print(X_train.shape)
-"""
-data_mean_removed = X_train - np.mean(X_train, axis=1, keepdims=True)
 
-# Z-score normalization
-X_train = data_mean_removed / np.std(data_mean_removed, axis=1, keepdims=True)
-
-
-sfreq = 250  # Sampling frequency in Hz
-n_channels, n_timepoints = X_train.shape
-
-eeg_ch_names = [
-    'Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2',
-    'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'Cz', 'Pz', 'Fz', 'Oz','A1','A2']
-
-# Define EOG channel names based on your setup
-eog_ch_names = ['EOG 1', 'EOG 2', 'EOG 3']  # Replace with actual labels if known
-
-# Combine EEG and EOG channel names
-ch_names = eeg_ch_names + eog_ch_names
-
-# Define channel types
-ch_types = ['eeg'] * 22 + ['eog'] * 3
-=======
->>>>>>> Stashed changes
 
 tmp=[]
 tmp1=[]
@@ -167,8 +141,6 @@ for i in range(len(X_train)):
     personne=time.time()
     data_cleaned,_= ica.clean(X_train[i])
     data_eval,_=ica.clean(X_eval[i])
-    """data_cleaned=X_train[i].T
-    data_eval=X_eval[i].T"""
     data_cleaned=data_cleaned[:,:22]
     data_eval=data_eval[:,:22]
     print(data_cleaned.shape)
@@ -182,15 +154,7 @@ for i in range(len(X_train)):
     data_cleaned=create_windows(data_cleaned)# Shape: (n_samples, n_timepoints, n_channels)
     data_eval=create_windows(data_eval)
     tmp.append(reshape_positions(y_train[i]))
-<<<<<<< Updated upstream
-    print(tmp)
-    for j in range(len(tmp)):
-        print(len(tmp[j]))
-    print("y_train shape:", tmp[i].shape)
-    print("data shape:", data_cleaned.shape)
-=======
     tmp_eval.append(reshape_positions(y_eval[i]))
->>>>>>> Stashed changes
     data_cleaned = np.nan_to_num(data_cleaned, nan=0.0, posinf=0.0, neginf=0.0)
     data_eval = np.nan_to_num(data_eval, nan=0.0, posinf=0.0, neginf=0.0)
     tmp1.append(data_cleaned)
@@ -201,15 +165,6 @@ X_train=np.array(tmp1)
 y_eval=np.array(tmp_eval)
 X_eval=np.array(tmp1_eval)
 # Save the data
-
-<<<<<<< Updated upstream
-print(X_train.shape)
-print(y_train.shape)
-=======
-print("eval shapes", X_eval.shape, y_eval.shape)
-print("Train shapes", X_train.shape,y_train.shape)
-
->>>>>>> Stashed changes
 np.save('data_cleaned.npy',X_train)
 np.save('y_train_rt.npy',y_train)
 np.save('data_cleaned_eval.npy',X_eval)
